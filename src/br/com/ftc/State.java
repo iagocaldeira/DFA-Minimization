@@ -71,4 +71,8 @@ public class State
         this.name = name;
         this.label = "";
     }
+    
+    public State(){
+    }
+    
 }
