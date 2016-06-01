@@ -38,7 +38,59 @@ public class Automaton
                 iterator.remove();
             }
         }
-        this.transitions = list;
+        this.setTransitions(list);
+    }
+    
+    
+    public void removeStatesWithoutTransitions() {
+        Set<String> usefulStates = new HashSet<>();
+        List<State> listS = new ArrayList<>(this.states);
+        List<Transition> listT = new ArrayList<>(this.transitions);
+        
+        for(ListIterator<Transition>iterator = listT.listIterator(); iterator.hasNext();) {
+            Transition t = iterator.next();
+            usefulStates.add(t.getFrom());
+            usefulStates.add(t.getTo());
+        }
+        
+        for(ListIterator<State>iterator = listS.listIterator(); iterator.hasNext();) {
+            State t = iterator.next();
+            if(t.getLabel().length() > 0 ){
+                Integer size = 0;
+                for( String s : usefulStates){
+                    if(t.getLabel().contains(s)){
+                        size++;
+                    }
+                }
+                if(size == 0){
+                    iterator.remove();
+                }
+            }
+        }
+        
+        this.setStates(listS);
+    }
+    
+    public void removeStatesDuplicates() {
+        List<State> list = new ArrayList<>(this.states);
+        for(ListIterator<State>iterator = list.listIterator(); iterator.hasNext();) {
+            State t = iterator.next();
+            Integer size = 0;
+            State auxState = new State();
+            for(ListIterator<State>iterator2 = list.listIterator(); iterator2.hasNext();) {
+                State t2 =iterator2.next();
+                if(t2.toString().equals(t.toString())){
+                    System.out.println("Duped States \n ["+t.toString()+","+t2.toString()+"]");
+                    size++;
+                    auxState = t2;
+                }   
+            }
+            if(size > 1) {
+                auxState.setLabel(auxState.getLabel()+"|"+t.getLabel());
+                iterator.remove();
+            }
+        }
+        this.setStates(list);
     }
 
     public Set<String> getAlphabet() {
@@ -136,24 +188,30 @@ public class Automaton
                 Iterator<String> a = this.alphabet.iterator();
                 while (a.hasNext()) {
                     String input = a.next();
-//                    Integer dqj = Integer.parseInt(deltaTransition(qj,input).getId());
-//                    Integer dqi = Integer.parseInt(deltaTransition(qi,input).getId());
-                    if(!hopcroftTable[i][j]){
-//                        System.out.println("{"+qi+","+qj+"}");
-//                        System.out.println("(qi,"+input+") -> "+dqi);
-//                        System.out.println("(qj,"+input+") -> "+dqj);
-//                        System.out.println("--");
-                        eqStates.add(Arrays.asList(findState(Integer.toString(i)),findState(Integer.toString(j))));
+                    Integer dqj = Integer.parseInt(deltaTransition(qj,input).getId());
+                    Integer dqi = Integer.parseInt(deltaTransition(qi,input).getId());
+                    if(hopcroftTable[dqi][dqj]){
+                        hopcroftTable[i][j] = true;
                     }
                 }
             }
         }
-//        for (int i = 0; i < this.states.size(); i++) {
-//            System.out.println();
-//            for (int j = 0; j < this.states.size(); j++)
-//                System.out.print("|"+hopcroftTable[i][j]+"\t|");
-//        }
-//        System.out.println();
+        
+        // Step 4 - add equivalent states to list
+        for (int i = 0; i < this.states.size(); i++) {
+            for (int j = 0; j < i; j++) {
+                if(!hopcroftTable[i][j]){
+                    eqStates.add(Arrays.asList(findState(Integer.toString(i)),findState(Integer.toString(j))));
+                }
+            }
+        }
+        
+        for (int i = 0; i < this.states.size(); i++) {
+            System.out.println();
+            for (int j = 0; j < this.states.size(); j++)
+                System.out.print("|"+hopcroftTable[i][j]+"\t|");
+        }
+        System.out.println();
         return eqStates;
     }
 
@@ -183,6 +241,9 @@ public class Automaton
         for (List<State> stateTuple : eqStates) {
             // Find and rewrite states from tuple
             this.joinStates(stateTuple);
+            
+            removeStatesDuplicates();
+            removeStatesWithoutTransitions();
 
             // Find and rewrite transitions
             for(Transition t : this.transitions) {
