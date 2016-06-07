@@ -8,7 +8,8 @@ public class afdminimization {
     public static void main(String argv[]) {
         Structure fa = new Structure("C:\\Users\\sala\\Desktop\\teste1.jff");
         Automaton au = fa.getAutomaton();
-
+        au.remainingTransitions();
+        
         Set<List<State>> eqStates = au.equivalentStates();
 
         for (List<State> stateTuple: eqStates)
