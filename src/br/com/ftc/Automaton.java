@@ -1,6 +1,11 @@
 package br.com.ftc;
 
+import com.sun.org.apache.xpath.internal.operations.And;
+
+import javax.print.DocFlavor;
 import java.util.*;
+
+import static javafx.scene.input.KeyCode.T;
 
 public class Automaton
 {
@@ -29,6 +34,77 @@ public class Automaton
     public void setTransitions(List<Transition> transitions) {
         this.transitions = transitions;
     }
+    
+    //verify if the state is a deadState
+    private boolean isDeadState(List<Transition> transitions, State state){
+
+        List<Transition> stateTransitionsList = new ArrayList<Transition>();
+        for (Transition tr : transitions) {
+            if(tr.getFrom().equals(state.getId())){
+                stateTransitionsList.add(tr);
+            }
+        }
+
+        for (Transition tt : stateTransitionsList) {
+            if(!(tt.getFrom().equals(tt.getTo())) || state.getIsFinal()){
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    //look at the transitions and verify is there's some transition missing
+    //if so, create the remaining transitions pointing to the dead state
+    public void remainingTransitions() {
+        List<Transition> transitionsList = new ArrayList<>(this.transitions);
+        List<State> statesList = new ArrayList<>(this.states);
+        State deadState = null;
+
+        for(ListIterator<State>iteratorS = statesList.listIterator(); iteratorS.hasNext();) {
+            State s = iteratorS.next();
+            if(this.isDeadState(transitionsList, s)){
+                deadState = s;
+            }
+        }
+
+        if(deadState == null){
+            String deadStateId = Integer.toString(this.states.size());
+            deadState = new State(deadStateId, false, false, deadStateId);
+            statesList.add(deadState);
+        }
+
+        Iterator iteratorA = alphabet.iterator();
+        while(iteratorA.hasNext()){
+            boolean flag = false;
+            String symbol = (String) iteratorA.next();
+            List<Transition> tran = transitionsList;
+            Collections.sort(tran, new Comparator<Transition>() {
+                public int compare(Transition t1, Transition t2) {
+                    if(Integer.parseInt(t1.getFrom()) > Integer.parseInt(t2.getFrom()))
+                        return +1;
+                    else if(Integer.parseInt(t1.getFrom()) < Integer.parseInt(t2.getFrom()))return -1;
+                    else return 0;
+                }
+            });
+            for(ListIterator<State>iteratorS = statesList.listIterator(); iteratorS.hasNext();) {
+                State s = iteratorS.next();
+                flag = false;
+                for(Transition t : transitionsList){
+                    if((t.getFrom().equals(s.getId())) && (t.getRead().equals(symbol))){
+                        flag = true;
+                    }
+                }
+                if(!flag){
+                    transitionsList.add(new Transition(s.getId(), deadState.getId(), symbol));
+                }
+            }
+
+        }
+
+        this.setTransitions(transitionsList);
+        this.setStates(statesList);
+    }
 
     public void removeTransitionsDuplicates() {
         List<Transition> list = new ArrayList<>(this.transitions);
@@ -40,19 +116,19 @@ public class Automaton
         }
         this.setTransitions(list);
     }
-    
-    
+
+
     public void removeStatesWithoutTransitions() {
         Set<String> usefulStates = new HashSet<>();
         List<State> listS = new ArrayList<>(this.states);
         List<Transition> listT = new ArrayList<>(this.transitions);
-        
+
         for(ListIterator<Transition>iterator = listT.listIterator(); iterator.hasNext();) {
             Transition t = iterator.next();
             usefulStates.add(t.getFrom());
             usefulStates.add(t.getTo());
         }
-        
+
         for(ListIterator<State>iterator = listS.listIterator(); iterator.hasNext();) {
             State t = iterator.next();
             if(t.getLabel().length() > 0 ){
@@ -67,10 +143,10 @@ public class Automaton
                 }
             }
         }
-        
+
         this.setStates(listS);
     }
-    
+
     public void removeStatesDuplicates() {
         List<State> list = new ArrayList<>(this.states);
         for(ListIterator<State>iterator = list.listIterator(); iterator.hasNext();) {
@@ -83,7 +159,7 @@ public class Automaton
                     System.out.println("Duped States \n ["+t.toString()+","+t2.toString()+"]");
                     size++;
                     auxState = t2;
-                }   
+                }
             }
             if(size > 1) {
                 auxState.setLabel(auxState.getLabel()+"|"+t.getLabel());
@@ -174,7 +250,7 @@ public class Automaton
             for (int j = 0; j < i; j++) {
                 State qj = findState(Integer.toString(j));
                 if ((this.finalStates.contains(qi) && !this.finalStates.contains(qj)) ||
-                    (!this.finalStates.contains(qi) && this.finalStates.contains(qj))) {
+                        (!this.finalStates.contains(qi) && this.finalStates.contains(qj))) {
                     hopcroftTable[i][j] = true;
                 }
             }
@@ -196,7 +272,7 @@ public class Automaton
                 }
             }
         }
-        
+
         // Step 4 - add equivalent states to list
         for (int i = 0; i < this.states.size(); i++) {
             for (int j = 0; j < i; j++) {
@@ -205,7 +281,7 @@ public class Automaton
                 }
             }
         }
-        
+
         for (int i = 0; i < this.states.size(); i++) {
             System.out.println();
             for (int j = 0; j < this.states.size(); j++)
@@ -241,7 +317,7 @@ public class Automaton
         for (List<State> stateTuple : eqStates) {
             // Find and rewrite states from tuple
             this.joinStates(stateTuple);
-            
+
             removeStatesDuplicates();
             removeStatesWithoutTransitions();
 
